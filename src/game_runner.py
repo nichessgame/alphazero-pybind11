@@ -379,6 +379,45 @@ def get_elo(past_elo, win_rates, new_agent):
     return past_elo
 
 
+def shuffle_data(Game, iteration):
+    cs = Game.CANONICAL_SHAPE()
+    canon_pattern = os.path.join(HIST_LOCATION, f'{iteration:04d}-*-canonical-*.pt')
+    v_pattern = os.path.join(HIST_LOCATION, f'{iteration:04d}-*-v-*.pt')
+    p_pattern = os.path.join(HIST_LOCATION, f'{iteration:04d}-*-pi-*.pt')
+    c_files = sorted(glob.glob(canon_pattern))
+    v_files = sorted(glob.glob(v_pattern))
+    p_files = sorted(glob.glob(p_pattern))
+    if len(c_files) == 0:
+        return
+    c_list = []
+    for f in c_files:
+        size = int(f.split('-')[-1].split('.')[0])
+        c_list.append(torch.FloatTensor(torch.FloatStorage.from_file(f, shared=True, size=size*cs[0]*cs[1]*cs[2])).reshape(size, cs[0], cs[1], cs[2]))
+    v_list = []
+    for f in v_files:
+        size = int(f.split('-')[-1].split('.')[0])
+        v_list.append(torch.FloatTensor(torch.FloatStorage.from_file(f, shared=True, size=size*(Game.NUM_PLAYERS()+1))).reshape(size, Game.NUM_PLAYERS()+1))
+    p_list = []
+    for f in p_files:
+        size = int(f.split('-')[-1].split('.')[0])
+        p_list.append(torch.FloatTensor(torch.FloatStorage.from_file(f, shared=True, size=size*Game.NUM_MOVES())).reshape(size, Game.NUM_MOVES()))
+    if len(c_list) > 0:
+        c_tensor = torch.cat(c_list, dim=0)
+        v_tensor = torch.cat(v_list, dim=0)
+        p_tensor = torch.cat(p_list, dim=0)
+        N = c_tensor.shape[0]
+        if N > 0:
+            idx = torch.randperm(N)
+            c_tensor = c_tensor[idx]
+            v_tensor = v_tensor[idx]
+            p_tensor = p_tensor[idx]
+            maybe_save(Game, c_tensor, v_tensor, p_tensor, N, 0, iteration, location=HIST_LOCATION, name='', force=True)
+            for f in c_files + v_files + p_files:
+                try:
+                    os.remove(f)
+                except Exception:
+                    pass
+
 if __name__ == '__main__':
     import shutil
     import neural_net
@@ -936,6 +975,9 @@ if __name__ == '__main__':
             gc.collect()
 
             resample_by_surprise(Game, i)
+            gc.collect()
+
+            shuffle_data(Game, i)
             gc.collect()
 
             hist_size = calc_hist_size(i)
