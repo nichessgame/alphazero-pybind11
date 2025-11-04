@@ -424,7 +424,7 @@ if __name__ == '__main__':
         dataset = ConcatDataset(datasets)
         sample_count = len(dataset)
         dataloader = DataLoader(
-                dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False)
+                dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
 
         i_out = 0
         batch_out = 0
