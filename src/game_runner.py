@@ -15,6 +15,8 @@ from load_lib import load_alphazero
 
 alphazero = load_alphazero()
 
+initialized = False
+
 HIST_SIZE = 50_000
 HIST_LOCATION = os.path.join('data', 'history')
 TMP_HIST_LOCATION = os.path.join('data', 'tmp_history')
@@ -254,11 +256,18 @@ class GameRunner:
         pbar.close()
 
     def batch_builder(self, player):
+        global initialized
         while (self.pm.remaining_games() > 0):
             try:
                 batch_index = self.ready_queues[player].get(timeout=1)
             except queue.Empty:
                 continue
+
+            # TODO: Gets stuck without this. Why?
+            if not initialized:
+                time.sleep(1)
+                initialized = True
+
             batch = self.batches[batch_index]
             game_indices = self.pm.build_batch(
                 batch_index % self.num_players, batch, self.batch_workers)
