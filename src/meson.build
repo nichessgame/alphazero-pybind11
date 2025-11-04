@@ -103,7 +103,7 @@ test('gtest tests', connect4_gs_test)
 
 nichess_gs = library(
     'nichess_gs',
-    'nichess_gs.cc', 'nichess_wrapper.cc',
+    'nichess_gs.cc', 'nichess_wrapper.cc', 'agent_cache.cc',
     dependencies: [eigen_dep, absl_hash_dep, nichess_dep],
     cpp_args: lib_args,
 )

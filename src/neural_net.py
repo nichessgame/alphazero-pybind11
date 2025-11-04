@@ -332,7 +332,7 @@ class NNWrapper:
             filepath = filename
         if not os.path.exists(filepath):
             raise Exception(f"No model in path {filepath}")
-        checkpoint = torch.load(filepath)
+        checkpoint = torch.load(filepath, weights_only=False)
         assert checkpoint[
             'game'] == Game, f'Mismatching game type when loading model: got: {checkpoint["game"].__name__} want: {Game.__name__}'
         net = NNWrapper(checkpoint['game'], checkpoint['args'])

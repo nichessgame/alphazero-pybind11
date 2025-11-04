@@ -7,9 +7,6 @@
 
 namespace alphazero::nichess_gs {
 
-auto gameCache = nichess::GameCache();
-auto agentCache = nichess_wrapper::AgentCache();
-
 using CanonicalTensor =
     SizedTensor<float, Eigen::Sizes<CANONICAL_SHAPE[0], CANONICAL_SHAPE[1],
                                     CANONICAL_SHAPE[2]>>;
@@ -17,11 +14,11 @@ using CanonicalTensor =
 class DLLEXPORT NichessGS : public GameState {
  public:
   NichessGS() {
-    gameWrapper = std::make_unique<nichess_wrapper::GameWrapper>(gameCache, agentCache);
+    gameWrapper = std::make_unique<nichess_wrapper::GameWrapper>();
   }
 
   NichessGS(const std::string encodedBoard) {
-    gameWrapper = std::make_unique<nichess_wrapper::GameWrapper>(gameCache, agentCache, encodedBoard);
+    gameWrapper = std::make_unique<nichess_wrapper::GameWrapper>(encodedBoard);
   }
 
   [[nodiscard]] std::unique_ptr<GameState> copy() const noexcept override;
@@ -78,12 +75,10 @@ class DLLEXPORT NichessGS : public GameState {
   // This avoids wasting tons of space when caching states.
   void minimize_storage() override {}
 
-  // In Nichess PlayerAction consists of move + ability. Since that would be too many actions to
-  // consider, alphazero only predicts the move while the ability is determined in a rule-based way.
-  // This method takes the move index (output of alphazero network), finds the ability and converts 
-  // both to a standard Nichess PlayerAction:
-  // moveSrcIdx.moveDstIdx.abilitySrcIdx.abilityDstIdx
+  // Converts neural net move [0, 4096] to moveSrcIdx.moveDstIdx
   [[nodiscard]] std::string move_to_player_action(uint32_t move) const;
+
+  [[nodiscard]] int src_and_dst_to_move(int srcIdx, int dstIdx) const;
 
  private:
   std::unique_ptr<nichess_wrapper::GameWrapper> gameWrapper;

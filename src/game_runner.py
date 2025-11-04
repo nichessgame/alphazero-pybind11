@@ -19,6 +19,7 @@ HIST_SIZE = 50_000
 HIST_LOCATION = os.path.join('data', 'history')
 TMP_HIST_LOCATION = os.path.join('data', 'tmp_history')
 CHECKPOINT_LOCATION = os.path.join('data', 'checkpoint')
+
 GRArgs = namedtuple(
     'GRArgs', ['title', 'game', 'max_batch_size', 'cuda', 'iteration',  'data_save_size', 'data_folder', 'concurrent_batches', 'batch_workers', 'nn_workers', 'result_workers', 'mcts_workers'], defaults=(0, HIST_SIZE, TMP_HIST_LOCATION, 0, 0, 1, 1, os.cpu_count() - 1))
 
@@ -57,6 +58,7 @@ FPU_REDUCTION = 0.25
 SELF_PLAY_BATCH_SIZE = 256
 SELF_PLAY_CONCURRENT_BATCH_MULT = 2
 SELF_PLAY_CHUNKS = 4
+
 
 # This generally should be as big as can fit on your gpu.
 TRAIN_BATCH_SIZE = 1024
@@ -268,8 +270,7 @@ class GameRunner:
     def player_executor(self):
         while (self.pm.remaining_games() > 0):
             try:
-                batch, batch_index, game_indices = self.batch_queue.get(
-                    timeout=1)
+                batch, batch_index, game_indices = self.batch_queue.get(timeout=1)
             except queue.Empty:
                 continue
             self.v[batch_index], self.pi[batch_index] = self.players[batch_index %
@@ -279,8 +280,7 @@ class GameRunner:
     def result_processor(self):
         while (self.pm.remaining_games() > 0):
             try:
-                batch_index, game_indices = self.result_queue.get(
-                    timeout=1)
+                batch_index, game_indices = self.result_queue.get(timeout=1)
             except queue.Empty:
                 continue
             v = self.v[batch_index].cpu().numpy()
@@ -310,12 +310,13 @@ class GameRunner:
                 os.path.join(f'{self.args.data_folder}', f'{self.args.iteration:04d}-{batch:04d}-v-{size}.pt'), shared=True, size=size*(self.num_players+1))).reshape(size, self.num_players+1)
             p_tensor = torch.FloatTensor(torch.FloatStorage.from_file(
                 os.path.join(f'{self.args.data_folder}', f'{self.args.iteration:04d}-{batch:04d}-pi-{size}.pt'), shared=True, size=size*(self.args.game.NUM_MOVES()))).reshape(size, self.args.game.NUM_MOVES())
+
             c_tensor[:] = self.hist_canonical[:size]
             v_tensor[:] = self.hist_v[:size]
             p_tensor[:] = self.hist_pi[:size]
+
             self.saved_samples += size
             batch += 1
-
 
 class RandPlayer:
     def __init__(self, game, max_batch_size):
@@ -423,8 +424,7 @@ if __name__ == '__main__':
         dataset = ConcatDataset(datasets)
         sample_count = len(dataset)
         dataloader = DataLoader(
-            dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False)
-        print(f'dataset size: {len(dataset)}')
+                dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False)
 
         i_out = 0
         batch_out = 0
@@ -489,7 +489,6 @@ if __name__ == '__main__':
         sample_count = len(dataset)
         dataloader = DataLoader(
             dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False)
-        print(f'dataset size: {len(dataset)}')
 
         nn = neural_net.NNWrapper.load_checkpoint(
             Game, CHECKPOINT_LOCATION, f'{iteration:04d}-{run_name}.pt')
@@ -568,7 +567,6 @@ if __name__ == '__main__':
         dataset = ConcatDataset(datasets)
         dataloader = DataLoader(
             dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
-        print(f'dataset size: {len(dataset)}')
 
         nn = neural_net.NNWrapper.load_checkpoint(
             Game, CHECKPOINT_LOCATION, f'{iteration:04d}-{run_name}.pt')
@@ -827,7 +825,7 @@ if __name__ == '__main__':
     if start == 0:
         create_init_net(Game, nnargs)
         wr = np.empty((total_agents, total_agents))
-        wr[:] = np.NAN
+        wr[:] = np.nan
         elo = np.zeros(total_agents)
         current_best = 0
         total_train_steps = 0
@@ -839,7 +837,7 @@ if __name__ == '__main__':
     else:
         tmp_wr = np.genfromtxt(os.path.join(
             'data', 'win_rate.csv'), delimiter=',')
-        wr = np.full_like(tmp_wr, np.NAN)
+        wr = np.full_like(tmp_wr, np.nan)
         wr[:start+1][:start+1] = tmp_wr[:start+1][:start+1]
         tmp_elo = np.genfromtxt(os.path.join('data', 'elo.csv'), delimiter=',')
         elo = np.zeros_like(tmp_elo)
