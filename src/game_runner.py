@@ -22,6 +22,7 @@ HIST_LOCATION = os.path.join('data', 'history')
 TMP_HIST_LOCATION = os.path.join('data', 'tmp_history')
 CHECKPOINT_LOCATION = os.path.join('data', 'checkpoint')
 
+
 GRArgs = namedtuple(
     'GRArgs', ['title', 'game', 'max_batch_size', 'cuda', 'iteration',  'data_save_size', 'data_folder', 'concurrent_batches', 'batch_workers', 'nn_workers', 'result_workers', 'mcts_workers'], defaults=(0, HIST_SIZE, TMP_HIST_LOCATION, 0, 0, 1, 1, os.cpu_count() - 1))
 
@@ -35,11 +36,6 @@ MAX_CACHE_SIZE = 0
 # Due to multithreading, the cache can have high contention.
 # The more threads generally means you want more shards.
 CACHE_SHARDS = os.cpu_count()
-
-# To decide on the following numbers, I would advise graphing the equation: scalar*(1+beta*(((iter+1)/scalar)**alpha-1)/alpha)
-WINDOW_SIZE_ALPHA = 0.5  # This decides how fast the curve flattens to a max
-WINDOW_SIZE_BETA = 0.7  # This decides the rough overall slope.
-WINDOW_SIZE_SCALAR = 6  # This ends up being approximately first time history doesn't grow
 
 RESULT_WORKERS = 2
 DATA_WORKERS = os.cpu_count() - 1
@@ -60,6 +56,7 @@ FPU_REDUCTION = 0.25
 SELF_PLAY_BATCH_SIZE = 256
 SELF_PLAY_CONCURRENT_BATCH_MULT = 2
 SELF_PLAY_CHUNKS = 4
+
 
 
 # This generally should be as big as can fit on your gpu.
@@ -426,9 +423,6 @@ if __name__ == '__main__':
         nn = neural_net.NNWrapper(Game, nnargs)
         nn.save_checkpoint(CHECKPOINT_LOCATION, f'0000-{run_name}.pt')
 
-    def calc_hist_size(i):
-        return int(WINDOW_SIZE_SCALAR*(1 + WINDOW_SIZE_BETA*(((i+1)/WINDOW_SIZE_SCALAR)**WINDOW_SIZE_ALPHA-1)/WINDOW_SIZE_ALPHA))
-
     def maybe_save(Game, c, v, p, size, batch, iteration, location=HIST_LOCATION, name='', force=False):
         cs = Game.CANONICAL_SHAPE()
         if size == HIST_SIZE or (force and size > 0):
@@ -472,7 +466,7 @@ if __name__ == '__main__':
         dataset = ConcatDataset(datasets)
         sample_count = len(dataset)
         dataloader = DataLoader(
-                dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
+                dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False)
 
         i_out = 0
         batch_out = 0
@@ -649,7 +643,7 @@ if __name__ == '__main__':
 
         bs = TRAIN_BATCH_SIZE
         dataset = ConcatDataset(datasets)
-        dataloader = DataLoader(dataset, batch_size=bs, shuffle=True)
+        dataloader = DataLoader(dataset, batch_size=bs, shuffle=False)
 
         average_generation = total_size/min(hist_size, iteration+1)
         nn = neural_net.NNWrapper.load_checkpoint(
@@ -877,11 +871,15 @@ if __name__ == '__main__':
         elo = np.zeros(total_agents)
         current_best = 0
         total_train_steps = 0
+        epochs_since_success = 0
         if bootstrap_iters == 0:
             np.savetxt(os.path.join('data', 'elo.csv'), elo, delimiter=',')
             np.savetxt(os.path.join('data', 'win_rate.csv'), wr, delimiter=',')
             np.savetxt(os.path.join('data', 'total_train_steps.txt'),
                        [total_train_steps], delimiter=',')
+            np.savetxt(os.path.join('data', 'epochs_since_success.txt'),
+                       [epochs_since_success], delimiter=',')
+
     else:
         tmp_wr = np.genfromtxt(os.path.join(
             'data', 'win_rate.csv'), delimiter=',')
@@ -893,6 +891,9 @@ if __name__ == '__main__':
         current_best = np.argmax(elo[:start+1])
         total_train_steps = int(np.genfromtxt(
             os.path.join('data', 'total_train_steps.txt')))
+        epochs_since_success = int(np.genfromtxt(
+            os.path.join('data', 'epochs_since_success.txt')))
+
 
     postfix = {'best': current_best}
     if bootstrap_iters > 0 and bootstrap_iters > start:
@@ -905,7 +906,7 @@ if __name__ == '__main__':
             for i in pbar:
                 elo[i] = prev_elo[i]
                 wr[i][:bootstrap_iters] = prev_wr[i][:bootstrap_iters]
-                hist_size = calc_hist_size(i)
+                hist_size = 1
                 v_loss, pi_loss, total_train_steps = train(
                     Game, i, hist_size, run, total_train_steps)
                 np.savetxt(os.path.join('data', 'total_train_steps.txt'),
@@ -980,7 +981,8 @@ if __name__ == '__main__':
             shuffle_data(Game, i)
             gc.collect()
 
-            hist_size = calc_hist_size(i)
+            hist_size = epochs_since_success + 1
+            print(f'hist_size: {hist_size}')
             run.track(hist_size, name='history_size',
                       epoch=i, step=total_train_steps)
             v_loss, pi_loss, total_train_steps = train(
@@ -1035,10 +1037,15 @@ if __name__ == '__main__':
             wanted_panel_win_rate = (
                 GATING_PANEL_WIN_RATE * panel_ratio) + (GATING_BEST_WIN_RATE * (1.0 - panel_ratio))
             if panel_win_rate > wanted_panel_win_rate and best_win_rate > GATING_BEST_WIN_RATE:
+                epochs_since_success = 0
                 current_best = next_net
                 postfix['best'] = current_best
                 pbar.set_postfix(postfix)
                 panel.append(current_best)
                 while len(panel) > GATING_PANEL_SIZE:
                     panel = panel[1:]
+            else:
+                epochs_since_success += 1
+            np.savetxt(os.path.join('data', 'epochs_since_success.txt'),
+                   [epochs_since_success], delimiter=',')
             np.savetxt(os.path.join('data', 'win_rate.csv'), wr, delimiter=',')
