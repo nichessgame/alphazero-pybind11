@@ -83,19 +83,33 @@ app = Flask(__name__)
 CORS(app)
 
 import neural_net
-import game_runner
 np.set_printoptions(precision=3, suppress=True)
 nn_folder = os.path.join('data','checkpoint')
 nn_file = os.path.basename(
     sorted(glob.glob(os.path.join(nn_folder, '*.pt')))[-1])
 nn = neural_net.NNWrapper.load_checkpoint(Game, nn_folder, nn_file)
 
+gs = Game()
+
+@app.route('/update-state', methods = ['POST'])
+def update_state():
+    action = request.form['action']
+    srcIdx = int(action.split('.')[0])
+    dstIdx = int(action.split('.')[1])
+    agent_move = gs.src_and_dst_to_move(srcIdx, dstIdx)
+    gs.play_move(agent_move)
+    return "OK"
+
+@app.route('/new-game', methods = ['POST'])
+def new_game():
+    global gs
+    gs = Game()
+    return "OK"
+
 
 @app.route('/ai-action', methods = ['POST'])
 def ai_action():
-    encoded_position = request.form['encoded_position']
-    gs = Game(encoded_position)
-    print('gs made from the encoded position:')
+    print('gs:')
     print(gs)
     agent_move = eval_position(gs, nn, True)
     player_action = gs.move_to_player_action(agent_move)

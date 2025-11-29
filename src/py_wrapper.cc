@@ -105,6 +105,7 @@ PYBIND11_MODULE(alphazero, m) {
           },
           py::call_guard<py::gil_scoped_release>());
 
+
   py::class_<MCTS>(m, "MCTS")
       .def(py::init<float, uint32_t, uint32_t>())
       .def(py::init<float, uint32_t, uint32_t, float, float, float>())
@@ -352,6 +353,7 @@ PYBIND11_MODULE(alphazero, m) {
       .def(py::init<>())
       .def(py::init<const std::string>())
       .def("move_to_player_action", &nichess_gs::NichessGS::move_to_player_action)
+      .def("src_and_dst_to_move", &nichess_gs::NichessGS::src_and_dst_to_move)
       .def_static("NUM_PLAYERS", [] { return nichess_gs::NUM_PLAYERS; })
       .def_static("NUM_MOVES", [] { return nichess_gs::NUM_MOVES; })
       .def_static("NUM_SYMMETRIES", [] { return nichess_gs::NUM_SYMMETRIES; })
