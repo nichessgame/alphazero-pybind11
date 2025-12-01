@@ -95,6 +95,8 @@ PYBIND11_MODULE(alphazero, m) {
            py::call_guard<py::gil_scoped_release>())
       .def("scores", &GameState::scores,
            py::call_guard<py::gil_scoped_release>())
+      .def("heuristic_value", &GameState::heuristic_value,
+           py::call_guard<py::gil_scoped_release>())
       .def(
           "canonicalized",
           [](const GameState* gs) {

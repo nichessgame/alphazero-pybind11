@@ -276,4 +276,9 @@ float pieceTypeToMaxHealthPoints(nichess::PieceType pt) {
   return AgentCache::srcSquareToDstSquareToMoveIndex[srcIdx][dstIdx];
 };
 
+[[nodiscard]] Vector<float> NichessGS::heuristic_value() const noexcept {
+  return gameWrapper->quiescenceSearch();
+};
+
+
 }

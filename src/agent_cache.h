@@ -7,6 +7,7 @@ class AgentCache {
   public:
       static const std::vector<std::tuple<int,int>> moveIndexToSrcSquareAndDstSquare;
       static const std::vector<std::vector<int>> srcSquareToDstSquareToMoveIndex;
+      static const std::vector<std::vector<float>> pieceTypeToSquareToValue;
 
       AgentCache();
 };

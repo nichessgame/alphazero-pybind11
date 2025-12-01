@@ -80,6 +80,8 @@ class DLLEXPORT NichessGS : public GameState {
 
   [[nodiscard]] int src_and_dst_to_move(int srcIdx, int dstIdx) const;
 
+  [[nodiscard]] Vector<float> heuristic_value() const noexcept override;
+
  private:
   std::unique_ptr<nichess_wrapper::GameWrapper> gameWrapper;
 };

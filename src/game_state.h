@@ -87,6 +87,14 @@ class WEAKDLLEXPORT GameState {
   // Deletes all data that is not necessary for storing as a hash key.
   // This avoids wasting tons of space when caching states.
   virtual void minimize_storage() = 0;
+
+  [[nodiscard]] virtual Vector<float> heuristic_value() const noexcept {
+    auto retval = Vector<float>{3};
+    retval[0] = 0.5;
+    retval[1] = 0.5;
+    retval[2] = 0.5;
+    return retval;
+  }; // = 0? TODO
 };
 
 struct GameStateKeyWrapper {

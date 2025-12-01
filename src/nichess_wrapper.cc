@@ -2,6 +2,8 @@
 #include "nichess/nichess.hpp"
 #include "nichess/util.hpp"
 #include "nichess_constants.h"
+#include <math.h>
+#include <algorithm>
 #include <iostream>
 
 using namespace nichess;
@@ -184,6 +186,248 @@ Vector<uint8_t> nichess_wrapper::GameWrapper::computeValids() const {
   */
 
   return valids;
+}
+
+Vector<float> nichess_wrapper::GameWrapper::quiescenceSearch() {
+  auto retval = Vector<float>{3};
+  retval.setZero();
+
+  float val = this->quiescence(-9999, 9999);
+
+  // normalize the value to (0, 1)
+  // 0 - current player is losing, 1 - current player is winning
+  float tv = 1 / (1 + std::exp(-0.2 * val));
+  retval[0] = tv;
+  retval[1] = 1 - tv;
+
+  return retval;
+}
+
+std::vector<nichess_wrapper::ModifiedPlayerAction> nichess_wrapper::GameWrapper::generateNonQuietActionsWithScore() {
+  std::vector<nichess_wrapper::ModifiedPlayerAction> retval;
+  std::vector<PlayerAction> actions = game->generateLegalActions();
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i];
+    if( pa.actionType == ActionType::MOVE_REGULAR ||
+        pa.actionType == ActionType::MOVE_PROMOTE_P1_PAWN ||
+        pa.actionType == ActionType::MOVE_PROMOTE_P2_PAWN ||
+        pa.actionType == ActionType::SKIP 
+      ) {
+      continue;
+    }
+
+    int score = 0;
+    Piece* srcPiece = game->board[pa.srcIdx];
+    Piece* dstPiece = game->board[pa.dstIdx];
+    switch(srcPiece->type) {
+      case P1_KING:
+        score += 10;
+        break;
+      case P1_MAGE:
+        score += 20;
+        break;
+      case P1_PAWN:
+        score += 60;
+        break;
+      case P1_WARRIOR:
+        score += 40;
+        break;
+      case P1_ASSASSIN:
+        score += 30;
+        break;
+      case P1_KNIGHT:
+        score += 50;
+        break;
+      case P2_KING:
+        score += 10;
+        break;
+      case P2_MAGE:
+        score += 20;
+        break;
+      case P2_PAWN:
+        score += 60;
+        break;
+      case P2_WARRIOR:
+        score += 40;
+        break;
+      case P2_ASSASSIN:
+        score += 30;
+        break;
+      case P2_KNIGHT:
+        score += 50;
+        break;
+      default:
+        break;
+    }
+    switch(dstPiece->type) {
+      case P1_KING:
+        score += 1000;
+        break;
+      case P1_MAGE:
+        score += 900;
+        break;
+      case P1_PAWN:
+        score += 500;
+        break;
+      case P1_WARRIOR:
+        score += 600;
+        break;
+      case P1_ASSASSIN:
+        score += 800;
+        break;
+      case P1_KNIGHT:
+        score += 700;
+        break;
+      case P2_KING:
+        score += 1000;
+        break;
+      case P2_MAGE:
+        score += 900;
+        break;
+      case P2_PAWN:
+        score += 500;
+        break;
+      case P2_WARRIOR:
+        score += 600;
+        break;
+      case P2_ASSASSIN:
+        score += 800;
+        break;
+      case P2_KNIGHT:
+        score += 700;
+        break;
+      default:
+        break;
+    }
+    retval.push_back(nichess_wrapper::ModifiedPlayerAction(pa, score));
+  }
+  return retval;
+}
+
+float pieceTypeToMaxHealthPoints(PieceType pt) {
+  switch(pt) {
+    case P1_KING:
+      return nichess::KING_STARTING_HEALTH_POINTS;
+    case P1_MAGE:
+      return nichess::MAGE_STARTING_HEALTH_POINTS;
+    case P1_PAWN:
+      return nichess::PAWN_STARTING_HEALTH_POINTS;
+    case P1_WARRIOR:
+      return nichess::WARRIOR_STARTING_HEALTH_POINTS;
+    case P1_ASSASSIN:
+      return nichess::ASSASSIN_STARTING_HEALTH_POINTS;
+    case P1_KNIGHT:
+      return nichess::KNIGHT_STARTING_HEALTH_POINTS;
+    case P2_KING:
+      return nichess::KING_STARTING_HEALTH_POINTS;
+    case P2_MAGE:
+      return nichess::MAGE_STARTING_HEALTH_POINTS;
+    case P2_PAWN:
+      return nichess::PAWN_STARTING_HEALTH_POINTS;
+    case P2_WARRIOR:
+      return nichess::WARRIOR_STARTING_HEALTH_POINTS;
+    case P2_ASSASSIN:
+      return nichess::ASSASSIN_STARTING_HEALTH_POINTS;
+    case P2_KNIGHT:
+      return nichess::KNIGHT_STARTING_HEALTH_POINTS;
+    default:
+      return 0;
+  }
+}
+
+float pieceTypeToValueMultiplier(PieceType pt) {
+  switch(pt) {
+    case P1_KING:
+      return 100.0;
+    case P1_MAGE:
+      return 8.0;
+    case P1_PAWN:
+      return 1.0;
+    case P1_WARRIOR:
+      return 5.0;
+    case P1_ASSASSIN:
+      return 5.0;
+    case P1_KNIGHT:
+      return 5.0;
+    case P2_KING:
+      return 100.0;
+    case P2_MAGE:
+      return 8.0;
+    case P2_PAWN:
+      return 1.0;
+    case P2_WARRIOR:
+      return 5.0;
+    case P2_ASSASSIN:
+      return 5.0;
+    case P2_KNIGHT:
+      return 5.0;
+    default:
+      return 0;
+  }
+}
+
+// TODO: very basic, this can be improved
+float nichess_wrapper::GameWrapper::evaluateHeuristic() {
+  float materialDiff = 0;
+  float positionValue;
+  std::vector<Piece*> currentPieces = this->game->playerToPieces[this->game->currentPlayer];
+  for(int i = 0; i < currentPieces.size(); i++) {
+    Piece* currentPiece = currentPieces[i];
+    if(currentPiece->healthPoints <= 0) continue; // dead pieces don't move
+
+    materialDiff += (pieceTypeToValueMultiplier(currentPiece->type) + currentPiece->healthPoints / pieceTypeToMaxHealthPoints(currentPiece->type) + AgentCache::pieceTypeToSquareToValue[currentPiece->type][currentPiece->squareIndex]);
+  }
+  std::vector<Piece*> opponentPieces = this->game->playerToPieces[~this->game->currentPlayer];
+  for(int i = 0; i < opponentPieces.size(); i++) {
+    Piece* currentPiece = opponentPieces[i];
+    if(currentPiece->healthPoints <= 0) continue; // dead pieces don't move
+
+    materialDiff -= (pieceTypeToValueMultiplier(currentPiece->type) + currentPiece->healthPoints / pieceTypeToMaxHealthPoints(currentPiece->type) + AgentCache::pieceTypeToSquareToValue[currentPiece->type][currentPiece->squareIndex]);
+  }
+
+  return materialDiff;
+}
+
+bool compareModifiedPlayerActions(nichess_wrapper::ModifiedPlayerAction p1, nichess_wrapper::ModifiedPlayerAction p2) {
+  return p1.score > p2.score;
+}
+
+/*
+ * Returns position's value after the quiescence search from the current player's perspective
+ * */
+float nichess_wrapper::GameWrapper::quiescence(float alpha, float beta) {
+  // With the current approach, standPat will always produce the wrong value if the threat is beyond the horizon.
+  // Forks, checks, checkmates, etc.
+  // The best way to understand why this happens is to think about why it would misevaluate the Caro-Kann mate in 6.
+  // In chess they use check extensions, but this would be harder to implement in Nichess and wouldn't solve
+  // the problem for the other pieces. What if the queen is being attacked and not the king?
+  // In any case, this will only be used to speed up the early phases of training, so it doesn't have to be perfect.
+  float standPat = evaluateHeuristic();
+  if(standPat >= beta) {
+    return standPat;
+
+  }
+  if(alpha < standPat) {
+    alpha = standPat;
+  }
+
+  std::vector<nichess_wrapper::ModifiedPlayerAction> actions = generateNonQuietActionsWithScore();
+  std::sort(actions.begin(), actions.end(), compareModifiedPlayerActions);
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i].action;
+    UndoInfo ui = game->makeAction(pa);
+    float score = -quiescence(-beta, -alpha);
+    game->undoAction(ui);
+    
+    if(score >= beta) {
+      return score;
+
+    }
+    if(score > alpha) {
+      alpha = score;
+    }
+  }
+  return alpha;
 }
 
 // converts neural net output to actual action

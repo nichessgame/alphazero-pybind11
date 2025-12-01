@@ -111,6 +111,7 @@ def new_game():
 def ai_action():
     print('gs:')
     print(gs)
+    print(gs.heuristic_value())
     agent_move = eval_position(gs, nn, True)
     player_action = gs.move_to_player_action(agent_move)
     return player_action
