@@ -43,11 +43,16 @@ def eval_position(gs, agent, greedy=False):
         v, pi = agent.predict(torch.from_numpy(leaf.canonicalized()))
         v = v.cpu().numpy()
         pi = pi.cpu().numpy()
+        #heuristic_v = leaf.heuristic_value()
+        #heuristic_pi = leaf.heuristic_policy()
+        #if leaf.current_player() == gs.current_player():
+        #    t = heuristic_v[0]
+        #    heuristic_v[0] = heuristic_v[1]
+        #    heuristic_v[1] = t
+        #mcts.process_result(gs, heuristic_v, heuristic_pi, False)
         mcts.process_result(gs, v, pi, False)
         sims += 1
     print(f'\tRan {sims} simulations in {round(time.time()-start, 3)} seconds')
-    # print('Press enter for ai analysis')
-    # input()
     v, pi = agent.predict(torch.from_numpy(gs.canonicalized()))
     v = v.cpu().numpy()
     pi = pi.cpu().numpy()
@@ -73,9 +78,6 @@ def eval_position(gs, agent, greedy=False):
         return best_move
     else:
         return rand
-
-
-
 
 from flask import Flask, request
 from flask_cors import CORS
@@ -111,7 +113,6 @@ def new_game():
 def ai_action():
     print('gs:')
     print(gs)
-    print(gs.heuristic_value())
     agent_move = eval_position(gs, nn, True)
     player_action = gs.move_to_player_action(agent_move)
     return player_action

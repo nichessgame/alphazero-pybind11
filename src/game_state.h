@@ -89,12 +89,15 @@ class WEAKDLLEXPORT GameState {
   virtual void minimize_storage() = 0;
 
   [[nodiscard]] virtual Vector<float> heuristic_value() const noexcept {
-    auto retval = Vector<float>{3};
-    retval[0] = 0.5;
-    retval[1] = 0.5;
-    retval[2] = 0.5;
+    auto retval = Vector<float>{};
     return retval;
   }; // = 0? TODO
+
+  [[nodiscard]] virtual Vector<float> heuristic_policy() const noexcept {
+    auto retval = Vector<float>{};
+    return retval;
+  }; // = 0? TODO
+
 };
 
 struct GameStateKeyWrapper {

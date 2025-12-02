@@ -82,6 +82,9 @@ class DLLEXPORT NichessGS : public GameState {
 
   [[nodiscard]] Vector<float> heuristic_value() const noexcept override;
 
+  [[nodiscard]] Vector<float> heuristic_policy() const noexcept override;
+
+
  private:
   std::unique_ptr<nichess_wrapper::GameWrapper> gameWrapper;
 };

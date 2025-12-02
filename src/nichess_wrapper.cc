@@ -165,7 +165,6 @@ nichess_wrapper::GameWrapper::~GameWrapper() {
 Vector<uint8_t> nichess_wrapper::GameWrapper::computeValids() const {
   auto valids = Vector<uint8_t>{NUM_MOVES};
   valids.setZero();
-  int currentIndex;
   bool foundLegalMove = false;
   std::vector<Piece*> currentPlayerPieces = game->playerToPieces[game->currentPlayer];
   for(int i = 0; i < currentPlayerPieces.size(); i++) {
@@ -174,7 +173,7 @@ Vector<uint8_t> nichess_wrapper::GameWrapper::computeValids() const {
     std::vector<PlayerAction> legalActions = game->legalActionsByPiece(currentPiece);
     for(int j = 0; j < legalActions.size(); j++) {
       PlayerAction action = legalActions[j];
-      currentIndex = AgentCache::srcSquareToDstSquareToMoveIndex[action.srcIdx][action.dstIdx];
+      int currentIndex = AgentCache::srcSquareToDstSquareToMoveIndex[action.srcIdx][action.dstIdx];
       valids[currentIndex] = 1;
       foundLegalMove = true;
     }
@@ -199,6 +198,259 @@ Vector<float> nichess_wrapper::GameWrapper::quiescenceSearch() {
   float tv = 1 / (1 + std::exp(-0.2 * val));
   retval[0] = tv;
   retval[1] = 1 - tv;
+
+  return retval;
+}
+
+// This could be a 2D vector in agent_cache but it's easier to edit here.
+// Doesn't include special cases: MOVE_REGULAR, MOVE_CASTLE, MAGE_THROW_ASSASSIN, WARRIOR_THROW_WARRIOR, 
+// MOVE_PROMOTE_P1_PAWN, MOVE_PROMOTE_P2_PAWN and SKIP. 
+float srcAndDstPieceToPolicyScore(Piece *srcPiece, Piece *dstPiece) {
+  const float a = 2;
+  const float b = 4;
+  const float c = 8;
+  const float d = 10000;
+  switch (srcPiece->type) {
+    case P1_KING:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return b;
+        case P2_WARRIOR:
+          return a;
+        case P2_ASSASSIN:
+          return a;
+        case P2_KNIGHT:
+          return a;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P1_MAGE:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return a;
+        case P2_WARRIOR:
+          return a;
+        case P2_ASSASSIN:
+          return a;
+        case P2_KNIGHT:
+          return a;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P1_WARRIOR:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return b;
+        case P2_WARRIOR:
+          return a;
+        case P2_ASSASSIN:
+          return a;
+        case P2_KNIGHT:
+          return a;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P1_ASSASSIN:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return b;
+        case P2_WARRIOR:
+          return a;
+        case P2_ASSASSIN:
+          return b;
+        case P2_KNIGHT:
+          return b;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P1_KNIGHT:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return b;
+        case P2_WARRIOR:
+          return b;
+        case P2_ASSASSIN:
+          return b;
+        case P2_KNIGHT:
+          return b;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P1_PAWN:
+      switch(dstPiece->type) {
+        case P2_KING:
+          return d;
+        case P2_MAGE:
+          return c;
+        case P2_WARRIOR:
+          return c;
+        case P2_ASSASSIN:
+          return c;
+        case P2_KNIGHT:
+          return c;
+        case P2_PAWN:
+          return a;
+      }
+      break;
+    case P2_KING:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return b;
+        case P1_WARRIOR:
+          return a;
+        case P1_ASSASSIN:
+          return a;
+        case P1_KNIGHT:
+          return a;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+    case P2_MAGE:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return a;
+        case P1_WARRIOR:
+          return a;
+        case P1_ASSASSIN:
+          return a;
+        case P1_KNIGHT:
+          return a;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+    case P2_WARRIOR:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return b;
+        case P1_WARRIOR:
+          return a;
+        case P1_ASSASSIN:
+          return a;
+        case P1_KNIGHT:
+          return a;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+    case P2_ASSASSIN:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return b;
+        case P1_WARRIOR:
+          return a;
+        case P1_ASSASSIN:
+          return b;
+        case P1_KNIGHT:
+          return b;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+    case P2_KNIGHT:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return b;
+        case P1_WARRIOR:
+          return b;
+        case P1_ASSASSIN:
+          return b;
+        case P1_KNIGHT:
+          return b;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+    case P2_PAWN:
+      switch(dstPiece->type) {
+        case P1_KING:
+          return d;
+        case P1_MAGE:
+          return c;
+        case P1_WARRIOR:
+          return c;
+        case P1_ASSASSIN:
+          return c;
+        case P1_KNIGHT:
+          return c;
+        case P1_PAWN:
+          return a;
+      }
+      break;
+
+  }
+  return 10000000; // this should never happen
+}
+
+Vector<float> nichess_wrapper::GameWrapper::heuristicPolicy() {
+  auto retval = Vector<float>{NUM_MOVES};
+  retval.setZero();
+  std::vector<PlayerAction> actions = game->generateLegalActions();
+  float scoreSum = 0;
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i];
+    // special cases:
+    if(pa.actionType == ActionType::SKIP) {
+      // never true in the current version
+      retval[MOVE_SKIP_IDX] = 1;
+      scoreSum += 1;
+      continue;
+    } else if(
+        pa.actionType == ActionType::ABILITY_MAGE_THROW_ASSASSIN ||
+        pa.actionType == ActionType::ABILITY_WARRIOR_THROW_WARRIOR ||
+        pa.actionType == ActionType::MOVE_PROMOTE_P1_PAWN ||
+        pa.actionType == ActionType::MOVE_PROMOTE_P2_PAWN
+        ) {
+      int currentIndex = AgentCache::srcSquareToDstSquareToMoveIndex[pa.srcIdx][pa.dstIdx];
+      retval[currentIndex] += 5;
+      scoreSum += 5;
+      continue;
+    } else if(
+        pa.actionType == ActionType::MOVE_REGULAR ||
+        pa.actionType == ActionType::MOVE_CASTLE
+        ) {
+      int currentIndex = AgentCache::srcSquareToDstSquareToMoveIndex[pa.srcIdx][pa.dstIdx];
+      retval[currentIndex] += 1;
+      scoreSum += 1;
+      continue;
+    } else {
+      Piece *srcPiece  = game->board[pa.srcIdx];
+      Piece *dstPiece  = game->board[pa.dstIdx];
+      int currentIndex = AgentCache::srcSquareToDstSquareToMoveIndex[pa.srcIdx][pa.dstIdx];
+      float heuristicScore = srcAndDstPieceToPolicyScore(srcPiece, dstPiece);
+      retval[currentIndex] += heuristicScore;
+      scoreSum += heuristicScore;
+      continue;
+    }
+  }
+  // normalize
+  retval /= scoreSum;
 
   return retval;
 }

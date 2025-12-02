@@ -280,5 +280,8 @@ float pieceTypeToMaxHealthPoints(nichess::PieceType pt) {
   return gameWrapper->quiescenceSearch();
 };
 
+[[nodiscard]] Vector<float> NichessGS::heuristic_policy() const noexcept {
+  return gameWrapper->heuristicPolicy();
+};
 
 }

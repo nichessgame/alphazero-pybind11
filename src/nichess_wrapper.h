@@ -33,6 +33,7 @@ class GameWrapper {
     PlayerAction createNichessAction(uint32_t move);
     Vector<uint8_t> computeValids() const;
     Vector<float> quiescenceSearch();
+    Vector<float> heuristicPolicy();
     void makeAction(uint32_t move);
     std::string moveToPlayerAction(uint32_t move);
 
