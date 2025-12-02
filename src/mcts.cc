@@ -117,6 +117,9 @@ void MCTS::process_result(const GameState& gs, Vector<float>& value,
       pi = pi.array().pow(1.0 / root_policy_temp_);
       pi /= pi.sum();
       current_->update_policy(pi);
+      auto leaf_v =
+          value(current_->player) + value(num_players_) / num_players_;
+      current_->v = leaf_v;
       if (root_noise_enabled) {
         add_root_noise();
       }
