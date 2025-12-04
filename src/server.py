@@ -45,7 +45,8 @@ def eval_position(gs, agent, greedy=False):
         pi = pi.cpu().numpy()
         #heuristic_v = leaf.heuristic_value()
         #heuristic_pi = leaf.heuristic_policy()
-        #if leaf.current_player() == gs.current_player():
+        # heuristic_v is relative to the current player, but AlphaZero expects [P1, P2, Draw]
+        #if leaf.current_player() == 1:
         #    t = heuristic_v[0]
         #    heuristic_v[0] = heuristic_v[1]
         #    heuristic_v[1] = t
