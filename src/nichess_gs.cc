@@ -50,8 +50,20 @@ void NichessGS::play_move(uint32_t move) {
     }
   } else if(gameWrapper->game->repetitionsDraw) {
     scores[2] = 1;
-  } else if(gameWrapper->game->moveNumber >= 250) {
-    scores[2] = 1;
+  } else if(gameWrapper->game->moveNumber >= 70) {
+    auto hv = gameWrapper->quiescenceSearch();
+    if(gameWrapper->game->currentPlayer == Player::PLAYER_2) {
+      float t = hv[0];
+      hv[0] = hv[1];
+      hv[1] = hv[0];
+    }
+    if(hv[0] > 0.65) {
+      scores[0] = 1;
+    } else if(hv[1] > 0.65) {
+      scores[1] = 1;
+    } else {
+      scores[2] = 1;
+    }
   } else if(gameWrapper->actionsSinceProgress >= 24 && gameWrapper->game->moveNumber < 50) { // TODO: This is not part of the game, but helps with training. Chess has the "50 move rule", but they count 1 move as p1 action and p2 action, so this would be the "25 move rule" chess equivalent.
     scores[2] = 1;
   } else if(gameWrapper->actionsSinceProgress >= 40 && gameWrapper->game->moveNumber < 80) {

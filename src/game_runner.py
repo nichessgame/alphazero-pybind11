@@ -17,7 +17,7 @@ alphazero = load_alphazero()
 
 initialized = False
 
-HIST_SIZE = 50_000
+HIST_SIZE = 30_000
 HIST_LOCATION = os.path.join('data', 'history')
 TMP_HIST_LOCATION = os.path.join('data', 'tmp_history')
 CHECKPOINT_LOCATION = os.path.join('data', 'checkpoint')
@@ -60,7 +60,7 @@ SELF_PLAY_CHUNKS = 4
 
 
 # This generally should be as big as can fit on your gpu.
-TRAIN_BATCH_SIZE = 1024
+TRAIN_BATCH_SIZE = 2048
 # Note: If the game has a high number of symetries generated, this number should likely get lowered.
 TRAIN_SAMPLE_RATE = 1
 
@@ -97,17 +97,17 @@ def new_game():
 # They also enable restarting at a specific interation.
 bootstrap_iters = 0
 start = 0
-iters = 200
-depth = 4
-channels = 12
-kernel_size = 5
+iters = 1000
+depth = 6
+channels = 36
+kernel_size = 3
 dense_net = True
 network_name = 'densenet' if dense_net else 'resnet'
 lr_milestone = 150
 
 # MCTS search depth must increase with complex games.
-nn_selfplay_mcts_depth = 1000
-nn_selfplay_fast_mcts_depth = 200
+nn_selfplay_mcts_depth = 600
+nn_selfplay_fast_mcts_depth = 400
 nn_compare_mcts_depth = nn_selfplay_mcts_depth//2
 
 # This is  just for validation of learning.
@@ -677,7 +677,8 @@ if __name__ == '__main__':
 
         # Just use a random agent when generating data with network zero.
         # They are equivalent.
-        use_rand = best == 0
+        #use_rand = best == 0
+        use_rand = False
 
         if use_rand:
             nn = RandPlayer(Game, bs)

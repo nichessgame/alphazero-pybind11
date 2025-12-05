@@ -200,8 +200,15 @@ void PlayManager::update_inferences(const uint8_t player,
   std::vector<std::tuple<Vector<float>, Vector<float>>> values;
   for (auto i = 0UL; i < game_indices.size(); ++i) {
     auto& game = games_[game_indices[i]];
-    game.v = v.row(i);
-    game.pi = pi.row(i);
+    auto heuristic_v = game.leaf->heuristic_value();
+    auto heuristic_pi = game.leaf->heuristic_policy();
+    if(game.leaf->current_player() == 1) {
+      float t = heuristic_v[0];
+      heuristic_v[0] = heuristic_v[1];
+      heuristic_v[1] = t;
+    }
+    game.v = 0.5 * v.row(i) + 0.5 * heuristic_v;
+    game.pi = 0.5 * pi.row(i) + 0.5 * heuristic_pi;
     if (params_.max_cache_size > 0) {
       keys.emplace_back(game.leaf);
       values.emplace_back(Vector<float>{game.v}, Vector<float>{game.pi});
