@@ -100,7 +100,9 @@ void PlayManager::play() {
             }
           }
         }
-        const auto pi = mcts.probs(temp);
+        const auto mctsPi = mcts.probs(temp);
+        const auto alphaBetaPi = game.gs->alpha_beta_policy();
+        const auto pi = 0.5 * mctsPi + 0.5 * alphaBetaPi;
         const auto chosen_m = MCTS::pick_move(pi);
         if (params_.history_enabled && !game.capped) {
           PlayHistory ph{

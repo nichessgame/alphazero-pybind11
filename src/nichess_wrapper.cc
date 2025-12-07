@@ -556,6 +556,101 @@ std::vector<nichess_wrapper::ModifiedPlayerAction> nichess_wrapper::GameWrapper:
   return retval;
 }
 
+// used for action ordering in alphaBeta search
+std::vector<nichess_wrapper::ModifiedPlayerAction> nichess_wrapper::GameWrapper::generateActionsWithScore() {
+  std::vector<nichess_wrapper::ModifiedPlayerAction> retval;
+  std::vector<PlayerAction> actions = game->generateLegalActions();
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i];
+    if(pa.actionType == ActionType::SKIP) continue;
+    int score = 0;
+    Piece* srcPiece = game->board[pa.srcIdx];
+    Piece* dstPiece = game->board[pa.dstIdx];
+    switch(srcPiece->type) {
+      case P1_KING:
+        score += 10;
+        break;
+      case P1_MAGE:
+        score += 20;
+        break;
+      case P1_PAWN:
+        score += 60;
+        break;
+      case P1_WARRIOR:
+        score += 40;
+        break;
+      case P1_ASSASSIN:
+        score += 30;
+        break;
+      case P1_KNIGHT:
+        score += 50;
+        break;
+      case P2_KING:
+        score += 10;
+        break;
+      case P2_MAGE:
+        score += 20;
+        break;
+      case P2_PAWN:
+        score += 60;
+        break;
+      case P2_WARRIOR:
+        score += 40;
+        break;
+      case P2_ASSASSIN:
+        score += 30;
+        break;
+      case P2_KNIGHT:
+        score += 50;
+        break;
+      default:
+        break;
+    }
+    switch(dstPiece->type) {
+      case P1_KING:
+        score += 1000;
+        break;
+      case P1_MAGE:
+        score += 900;
+        break;
+      case P1_PAWN:
+        score += 500;
+        break;
+      case P1_WARRIOR:
+        score += 600;
+        break;
+      case P1_ASSASSIN:
+        score += 800;
+        break;
+      case P1_KNIGHT:
+        score += 700;
+        break;
+      case P2_KING:
+        score += 1000;
+        break;
+      case P2_MAGE:
+        score += 900;
+        break;
+      case P2_PAWN:
+        score += 500;
+        break;
+      case P2_WARRIOR:
+        score += 600;
+        break;
+      case P2_ASSASSIN:
+        score += 800;
+        break;
+      case P2_KNIGHT:
+        score += 700;
+        break;
+      default:
+        break;
+    }
+    retval.push_back(nichess_wrapper::ModifiedPlayerAction(pa, score));
+  }
+  return retval;
+}
+
 float pieceTypeToMaxHealthPoints(PieceType pt) {
   switch(pt) {
     case P1_KING:
@@ -680,6 +775,68 @@ float nichess_wrapper::GameWrapper::quiescence(float alpha, float beta) {
     }
   }
   return alpha;
+}
+
+// Negamax with alpha beta pruning
+float alphaBeta(nichess_wrapper::GameWrapper& gameWrapper, int depth, float alpha, float beta) {
+  if(depth == 0 || gameWrapper.game->isGameOver()) {
+    return gameWrapper.quiescence(alpha, beta);
+  }
+  std::vector<nichess_wrapper::ModifiedPlayerAction> actions = gameWrapper.generateActionsWithScore();
+  std::sort(actions.begin(), actions.end(), compareModifiedPlayerActions);
+  float value = -9999;
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i].action;
+    UndoInfo ui = gameWrapper.game->makeAction(pa);
+    value = std::max(value, -alphaBeta(gameWrapper, depth - 1, -beta, -alpha));
+    gameWrapper.game->undoAction(ui);
+    alpha = std::max(alpha, value);
+    if(alpha >= beta) {
+      break;
+    }
+  }
+  return value;
+}
+
+Vector<float> nichess_wrapper::GameWrapper::alphaBetaPolicy() {
+  std::vector<nichess_wrapper::ModifiedPlayerAction> actions = generateActionsWithScore();
+  std::sort(actions.begin(), actions.end(), compareModifiedPlayerActions);
+  PlayerAction bestAction = actions[0].action;
+  float bestValue = -9999;
+  std::vector<ActionValue> av;
+  for(int i = 0; i < actions.size(); i++) {
+    PlayerAction pa = actions[i].action;
+    UndoInfo ui = game->makeAction(pa);
+    float value = -alphaBeta(*this, 1, bestValue, 9999);
+    av.push_back(ActionValue(pa, value));
+    game->undoAction(ui);
+    if(value > bestValue) {
+      bestValue = value;
+      bestAction = pa;
+    }
+  }
+
+  float sum = 0;
+  for(int i = 0; i < av.size(); i++) {
+    av[i].value = 1 / std::pow((1 + (bestValue - av[i].value)), 2);
+    sum += av[i].value;
+  }
+
+  // normalize
+  for(int i = 0; i < av.size(); i++) {
+    av[i].value /= sum;
+  }
+
+  auto retval = Vector<float>{NUM_MOVES};
+  retval.setZero();
+  for(int i = 0; i < av.size(); i++) {
+    PlayerAction pa = av[i].action;
+    if(pa.actionType == ActionType::SKIP) continue;
+    int moveIdx = AgentCache::srcSquareToDstSquareToMoveIndex[pa.srcIdx][pa.dstIdx];
+    retval[moveIdx] = av[i].value;
+  }
+
+  return retval;
 }
 
 // converts neural net output to actual action

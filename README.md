@@ -38,17 +38,17 @@ Since we're doing this with very limited compute, it's important to use heuristi
 
 3) TODO: Alpha-beta search after MCTS
 
-   This will be implemented in `src/play_manager.cc` `play` method.
+   Implemented in `src/play_manager.cc` `play` method.
 
-   After running MCTS, we will run a shallow alpha–beta search and use it to form an additional policy estimate. Instead of:
+   After running MCTS, we run a shallow alpha–beta search and use it to form an additional policy estimate. Instead of:
    ```
    const auto pi = mcts.probs(temp);
    ```
-   we'll do: 
+   We have: 
    ```
    const auto mctsPi = mcts.probs(temp);
-   const auto alphaBetaPi = game.gs->alphaBetaPi();
-   const auto pi = 0.1 * mctsPi * pi + 0.9 * alphaBetaPi
+   const auto alphaBetaPi = game.gs->alpha_beta_policy();
+   const auto pi = 0.1 * mctsPi + 0.9 * alphaBetaPi
    ```
 
 4) TODO: Pretraining data

@@ -98,6 +98,12 @@ class WEAKDLLEXPORT GameState {
     return retval;
   }; // = 0? TODO
 
+  [[nodiscard]] virtual Vector<float> alpha_beta_policy() const noexcept {
+    auto retval = Vector<float>{};
+    return retval;
+  }; // = 0? TODO
+
+
 };
 
 struct GameStateKeyWrapper {

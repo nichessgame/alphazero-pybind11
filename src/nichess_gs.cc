@@ -296,4 +296,9 @@ float pieceTypeToMaxHealthPoints(nichess::PieceType pt) {
   return gameWrapper->heuristicPolicy();
 };
 
+[[nodiscard]] Vector<float> NichessGS::alpha_beta_policy() const noexcept {
+  return gameWrapper->alphaBetaPolicy();
+};
+
+
 }
