@@ -48,7 +48,7 @@ void NichessGS::play_move(uint32_t move) {
     } else {
       scores(1) = 1;
     }
-  } else if(gameWrapper->game->repetitionsDraw) {
+  } else if(gameWrapper->game->isGameDraw()) {
     scores[2] = 1;
   } else if(gameWrapper->game->moveNumber >= 70) {
     auto hv = gameWrapper->quiescenceSearch();
